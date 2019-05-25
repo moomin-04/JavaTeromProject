@@ -1,6 +1,13 @@
 import java.util.*;
 public class Tokenize {
+	private ArrayList<String> res=new ArrayList<String>();
 	
+	public ArrayList<String> getRes() {return res;}
+	
+	public Tokenize(StringBuffer sb) {
+		erase_comment(sb);
+		tokenizer(sb);
+	}
 	//Stack.h를 tokenize하기 이전에 주석을 지워주는 메소드
 	public void erase_comment(StringBuffer s){
 		int n=0,k=0;
@@ -17,9 +24,8 @@ public class Tokenize {
 		
 		//공백문자를 기준으로 tokenizer
 		StringTokenizer st=new StringTokenizer(s);
-		ArrayList<String> res=new ArrayList<String>();//나뉜 token을 ArrayList로 저장
 		for(int i=0; i<st.countTokens();i++) {
-			res.add(st.nextToken());
+			res.add(st.nextToken());//나뉜 token을 ArrayList로 저장
 		}
 		
 		//공백 이외 모두 토큰화
