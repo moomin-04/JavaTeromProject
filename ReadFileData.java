@@ -1,7 +1,8 @@
 import java.io.*;
 public class ReadFileData {	
-	static StringBuffer sb;
-
+	static private StringBuffer sb;
+	public StringBuffer getSb() {return sb;}
+	
 	public static void main(String[] args) {
 		int b=0;
 		StringBuffer buffer= new StringBuffer();
