@@ -43,7 +43,7 @@ public class GUI extends JFrame implements ActionListener, TreeSelectionListener
 	private JTree tree;
 	private JTable table;
 	private JPanel treePanel, contentPanel, changePanel; //content는 method의 body
-	private JScrollPane scrollPane1, scrollPane2;
+	private JScrollPane scrollPane;
 	private JTextArea contentArea, variableArea, ChangeTextArea;
 	private Vector<DefaultMutableTreeNode> method;
 	private Vector<DefaultMutableTreeNode> variable;
@@ -96,10 +96,11 @@ public class GUI extends JFrame implements ActionListener, TreeSelectionListener
 			
 			//tree 생성
 			root = new DefaultMutableTreeNode("" + p.cls.getName());
+			tree=new JTree(root);
 			tree.addTreeSelectionListener(this);
 			
-			scrollPane1 = new JScrollPane(tree);
-			treePanel.add(scrollPane1);
+			scrollPane = new JScrollPane(tree);
+			treePanel.add(scrollPane);
 			treePanel.add(variableArea);
 			contentPanel.add(contentArea, BorderLayout.CENTER);
 			add(treePanel);
@@ -110,6 +111,8 @@ public class GUI extends JFrame implements ActionListener, TreeSelectionListener
 		if(e.getSource() == Change) {
 			temp = contentArea.getText();
 		}
+		
+		
 		if(e.getSource() == Save) {
 		
 		}
@@ -129,36 +132,34 @@ public class GUI extends JFrame implements ActionListener, TreeSelectionListener
 		//트리에서 선택된 항목이 클래스의 이름과 같은 경우?
 		if(s.equals(p.cls.getName())) {
 			try{
-				scrollPane2.remove(contentArea);
-	            // 메소드와 변수내용을 가진 테이블을 스크롤패널에 붙인다. 
-	            scrollPane2.add(table);
-	            //밑에 두개가 뭐지?
-	            //contentPanel.remove(scrollPane); 
-	            //contentPanel.remove(changePanel);
-	            variableArea.setBorder(null);
-	            variableArea.setText(null);
+				scrollPane.remove(contentArea);
+                scrollPane.remove(table);
+                contentPanel.remove(scrollPane);
+                variableArea.setBorder(null);
+                variableArea.setText(null);
 	            } catch(Exception e1){}
 		}
 		
 		//table생성
 		String[] col = {"Name", "Type", "Access"};
-		Object[][] row = new Object[20][3]; //크기는 임의로 지정
+		Object[][] row = new Object[10][3]; //크기는 임의로 지정
 		table = new JTable(row, col);
-		scrollPane2 = new JScrollPane(table);
-		contentPanel.add(scrollPane2, BorderLayout.CENTER);
+		scrollPane = new JScrollPane(table);
+		contentPanel.add(scrollPane, BorderLayout.CENTER);
 		add(contentPanel);
 		setVisible(true);
 		
 		//테이블에 메소드 정보 표시
+		method=new Vector<DefaultMutableTreeNode>();
 		for(int i = 0; i < p.cls.getMethod().size(); i++) {
             row[i][0] = p.cls.getMethod().get(i).getName();
             row[i][1] = p.cls.getMethod().get(i).getType();
             row[i][2] = p.cls.getMethod().get(i).getAccess();
 		
         //트리에 메소드노드를 붙인다.
-            method.add(i, new DefaultMutableTreeNode("-" + p.cls.getMethod().get(i).getName()));
+            method.add(new DefaultMutableTreeNode("-" + p.cls.getMethod().get(i).getName()));
             root.add(method.get(i));
-		}
+		} setVisible(true);
 		
         //테이블에 변수 표시
 		for(int i = 0; i < p.cls.getField().size(); i++) {
@@ -167,22 +168,21 @@ public class GUI extends JFrame implements ActionListener, TreeSelectionListener
 			row[i + p.cls.getMethod().size()][2] = p.cls.getField().get(i).getAccess();
 		
 		//트리에 변수 항목 표시
+		variable = new Vector<DefaultMutableTreeNode>();
 		variable.add(new DefaultMutableTreeNode("-" + p.cls.getField().get(i).getName()));
 		root.add(variable.get(i));
-		}
+		} setVisible(true);
 		
 		//메소드를 선택했을 때 이벤트 표시
 		for(int i = 0 ; i < p.cls.getMethod().size(); i++) {
 			if(s.equals("-" + p.cls.getMethod().get(i).getName())) {
 				try {
-					//scrollPane2에 있던 내용 지우기
-					scrollPane2.remove(contentArea);
-					scrollPane2.remove(table);
-					contentPanel.remove(scrollPane2);
-					//있던 내용 옮겨두기
-					Original = p.cls.getMethod().get(i).getBody();
-					//이벤트가 발생한 노드에 대한 메소드 객체배열에서의 위치표시?
-					num=i;
+					//scrollPane에 있던 내용 지우기
+					scrollPane.remove(contentArea);
+	                scrollPane.remove(table);
+	                contentPanel.remove(scrollPane);
+	                variableArea.setBorder(null);
+	                variableArea.setText(null);
 				} catch(Exception e1) {}
 				
 				String variable = "";
@@ -203,8 +203,8 @@ public class GUI extends JFrame implements ActionListener, TreeSelectionListener
 	            variableArea.setEditable(false);
 	            contentArea.setEditable(true);
 	               
-	            scrollPane1 = new JScrollPane(contentArea);
-	            contentPanel.add(scrollPane1,BorderLayout.CENTER);
+	            scrollPane = new JScrollPane(contentArea);
+	            contentPanel.add(scrollPane,BorderLayout.CENTER);
 	            
 	            //chagne부분 잘 모르겠다
 	            changePanel = new JPanel();
@@ -222,10 +222,9 @@ public class GUI extends JFrame implements ActionListener, TreeSelectionListener
 			if(s.equals("-" + p.cls.getField().get(k).getName() + " : "+p.cls.getField().get(k).getType())) {
 	        // 트리에서 선택된 노드가 변수 이름과 같을 때
 				try{
-					scrollPane2.remove(contentArea);
-	                scrollPane2.remove(table);
-	                contentPanel.remove(scrollPane2);
-	                contentPanel.remove(changePanel);
+					scrollPane.remove(contentArea);
+	                scrollPane.remove(table);
+	                contentPanel.remove(scrollPane);
 	                variableArea.setBorder(null);
 	                variableArea.setText(null);
 	               } catch(Exception e1){}
@@ -246,8 +245,8 @@ public class GUI extends JFrame implements ActionListener, TreeSelectionListener
 	            //table.setFillsViewportHeight(true);
 	            //table.setAutoCreateRowSorter(true);
 	               
-	            scrollPane2 = new JScrollPane(table);
-	            contentPanel.add(scrollPane2,BorderLayout.CENTER);
+	            scrollPane = new JScrollPane(table);
+	            contentPanel.add(scrollPane,BorderLayout.CENTER);
 	            treePanel.add(variableArea,BorderLayout.PAGE_END);
 	            add(treePanel);
 	            add(contentPanel);                          
