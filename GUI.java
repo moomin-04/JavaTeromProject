@@ -1,5 +1,3 @@
-package TreeModel;
-import Test.*;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.Font;
@@ -97,8 +95,7 @@ public class GUI extends JFrame implements ActionListener, TreeSelectionListener
 			contentArea = new JTextArea(40,40);
 			
 			//tree 생성
-			root = new DefaultMutableTreeNode("" + p.getClassName()); //classInfo.getName같은 메소드 필요?
-			tree = new JTree(root);
+			root = new DefaultMutableTreeNode("" + p.cls.getName());
 			tree.addTreeSelectionListener(this);
 			
 			scrollPane1 = new JScrollPane(tree);
@@ -130,7 +127,7 @@ public class GUI extends JFrame implements ActionListener, TreeSelectionListener
 		String s = (String)node.getUserObject(); //노드로 지정된 객체를 반환한다. 보통 이벤트 처리시 노드의 이름을 가져올 때 사용한다.
 		
 		//트리에서 선택된 항목이 클래스의 이름과 같은 경우?
-		if(s.equals(p.getClassName())) {
+		if(s.equals(p.cls.getName())) {
 			try{
 				scrollPane2.remove(contentArea);
 	            // 메소드와 변수내용을 가진 테이블을 스크롤패널에 붙인다. 
@@ -153,37 +150,37 @@ public class GUI extends JFrame implements ActionListener, TreeSelectionListener
 		setVisible(true);
 		
 		//테이블에 메소드 정보 표시
-		for(int i = 0; i < p.getMethodInfo.size(); i++) {
-            row[i][0] = p.getMethoInfo(i).getName();
-            row[i][1] = getMethodInfo(i).MethodType();
-            row[i][2] = getMethodInfo(i).MethodAccess();
+		for(int i = 0; i < p.cls.getMethod().size(); i++) {
+            row[i][0] = p.cls.getMethod().get(i).getName();
+            row[i][1] = p.cls.getMethod().get(i).getType();
+            row[i][2] = p.cls.getMethod().get(i).getAccess();
 		
         //트리에 메소드노드를 붙인다.
-        method.add(i, new DefaultMutableTreeNode("-" + p.getMethodInfo(i).getName()));
-        root.add(method.get(i));
+            method.add(i, new DefaultMutableTreeNode("-" + p.cls.getMethod().get(i).getName()));
+            root.add(method.get(i));
 		}
 		
         //테이블에 변수 표시
-		for(int i = 0; i < p.getVarInfo.size(); i++) {
-			row[i + p.getMethodInfo.size()][0] = p.getVarInfo(i).getName();
-			row[i + p.getMethodInfo.size()][1] = p.getVarInfo(i).getType();
-			row[i + p.getMethodInfo.size()][2] = p.getVarInfo(i).getAccess();
+		for(int i = 0; i < p.cls.getField().size(); i++) {
+			row[i + p.cls.getMethod().size()][0] = p.cls.getField().get(i).getName();
+			row[i + p.cls.getMethod().size()][1] = p.cls.getField().get(i).getType();
+			row[i + p.cls.getMethod().size()][2] = p.cls.getField().get(i).getAccess();
 		
 		//트리에 변수 항목 표시
-		variable.add(new DefaultMutableTreeNode("-" + p.getVarInfo(i).getName()));
+		variable.add(new DefaultMutableTreeNode("-" + p.cls.getField().get(i).getName()));
 		root.add(variable.get(i));
 		}
 		
 		//메소드를 선택했을 때 이벤트 표시
-		for(int i = 0 ; i < p.getMethodInfo.size(); i++) {
-			if(s.equals("-" + p.getMehtoInfo(i).getName())) {
+		for(int i = 0 ; i < p.cls.getMethod().size(); i++) {
+			if(s.equals("-" + p.cls.getMethod().get(i).getName())) {
 				try {
 					//scrollPane2에 있던 내용 지우기
 					scrollPane2.remove(contentArea);
 					scrollPane2.remove(table);
 					contentPanel.remove(scrollPane2);
 					//있던 내용 옮겨두기
-					Original = p.getMethodInfo(i).getContent();
+					Original = p.cls.getMethod().get(i).getBody();
 					//이벤트가 발생한 노드에 대한 메소드 객체배열에서의 위치표시?
 					num=i;
 				} catch(Exception e1) {}
@@ -191,8 +188,8 @@ public class GUI extends JFrame implements ActionListener, TreeSelectionListener
 				String variable = "";
 				
 				//메소드 정보로부터 메소드가 사용한 변수를 불러와 출력한다.
-				for(int j = 0; j < p.getMethodInfo[i].getVarSize; j++) {
-					variable = variable.concat(p.getMethodInfo(i).getVarInfo(j).getName() + "\n");	
+				for(int j = 0; j < p.cls.getMethod().get(i).getField().size(); j++) {
+					variable = variable.concat(p.cls.getMethod().get(i).getField().get(j).getName() + "\n");	
 				}
 				
 				Border border1 = BorderFactory.createTitledBorder("Use Variable");
@@ -200,8 +197,8 @@ public class GUI extends JFrame implements ActionListener, TreeSelectionListener
 	            variableArea.setBorder(border1);
 	            contentArea.setBorder(border2);
 	               
-	            contentArea.setText("\n" + p.getMethodInfo(i).getContent());
-	            variableArea.setText(variable); //method에서 사요하는 var를 바로 위에서 정의한 string으로 표현
+	            contentArea.setText("\n" + p.cls.getMethod().get(i).getBody());
+	            variableArea.setText(variable); //method에서 사용하는 var를 바로 위에서 정의한 string으로 표현
 	               
 	            variableArea.setEditable(false);
 	            contentArea.setEditable(true);
@@ -221,8 +218,8 @@ public class GUI extends JFrame implements ActionListener, TreeSelectionListener
 			}
 		}
 		//변수를 선택했을 테이블 표시
-		for(int k = 0; k < p.getVarInfo.size(); k++) {
-			if(s.equals("-" + p.getVarInfo(i).getName() + " : "+p.getVarInfo(i).getType())) {
+		for(int k = 0; k < p.cls.getField().size(); k++) {
+			if(s.equals("-" + p.cls.getField().get(k).getName() + " : "+p.cls.getField().get(k).getType())) {
 	        // 트리에서 선택된 노드가 변수 이름과 같을 때
 				try{
 					scrollPane2.remove(contentArea);
@@ -236,11 +233,11 @@ public class GUI extends JFrame implements ActionListener, TreeSelectionListener
 	            // 변수 이름과 변수과 사용된 메소드를 기록한 테이블 생성
 	            String[] cols = {"Name","method"};
 	            Object[][] data = new Object[10][2];
-	            for(int j=0; j<p.getVarInfo(k).getMethodSize; j++) {
+	            for(int j=0; j<p.cls.getField().get(k).getMethod().size(); j++) {
 	                  data[j][0] = null; //변수의 이름이 들어가야함(밑에서 설정함)
-	                  data[j][1] = p.getVarInfo(k).getMethodInfo(j).getName();
+	                  data[j][1] = p.cls.getField().get(k).getMethod().get(j).getName();
 	            }
-	            data[0][0] = p.getVarInfo(k).getName();
+	            data[0][0] = p.cls.getField().get(k).getName();
 	               
 	            table = new JTable(data,cols);
 	            
