@@ -7,6 +7,7 @@ public class Parsing {//파싱해주는 클래스
 	ReadFileData f=new ReadFileData("./Stack.h");
 	public Tokenize tk=new Tokenize(f.getSb());
 	ArrayList<String> res=tk.getRes();
+	//토큰화 마친 결과=res로 arraylist 형식 저장
 	StringBuffer sb=new StringBuffer(tk.sb_without_comment);
 	static int methodcnt;
 	static int fieldcnt;//메소드 및 필드 개수 카운트
@@ -15,27 +16,34 @@ public class Parsing {//파싱해주는 클래스
 		find_class(res);
 	}
 	public void find_class(ArrayList<String> list) {
-		int i=list.indexOf("class");//class 위치 찾기
+		int i=list.indexOf("class");//class 위치 찾기=i에 index 저장
 		ClassInfo cls=new ClassInfo();//class정보저장 객체생성
-		cls.class_name=list.get(i+1);//"class" 다음에 나오는(i+1위치) 클래스 이름 저장
+		cls.setName(list.get(i+1));//"class" 다음에 나오는(i+1위치) 클래스 이름 저장
 		cls.start_class=list.indexOf("{");
 		cls.end_class=find_end_index(cls.start_class,list);//시작과 끝 지점 저장
-		System.out.print(cls.end_class);
 		find_method(list,cls);
 		}
 	
 	public void find_method(ArrayList<String> list,ClassInfo cls) {
 		SaveKeyword kw=new SaveKeyword();
 		String access = null;
+		Stack s=new Stack();//stack에 하나가 들어있으면 멤버임을 판단
 		for(int i=cls.start_class;i<cls.end_class;i++) {//class내부에 선언된 메소드와 필드를 찾아보자
-//			System.out.print(list.get(i)+"/");
+			if(list.get(i).equals("{")||list.get(i).equals("(")) {
+				s.push(i);
+			}//괄호를 열면 그 인덱스(위치)를 스택에 저장
+			else if(list.get(i).equals("}")|list.get(i).equals(")")) {
+				s.pop();
+			}
+			
+			//access 자동 설정
 			if(kw.kw_access.contains(list.get(i))){
 				access=list.get(i);					
 			}
-			System.out.println(i+access);
-			if(cls.class_name.equals(list.get(i))&&list.get(i-1).equals("~")) {//소멸자->body가 class내부에 정의되어있음->methodinfo따로 set해줘야함
+			
+			if(cls.getName().equals(list.get(i))&&list.get(i-1).equals("~")) {//소멸자->body가 class내부에 정의되어있음->methodinfo따로 set해줘야함
 					MethodInfo destructor=new MethodInfo();
-					destructor.setName("~"+list.get(i)+"()");//소멸자 이름 설정
+					destructor.setName("~"+list.get(i));//소멸자 이름 설정
 					int end_body=find_end_index(i+3,list);//list[i+3]은 {,list[end_body]는 }가르키게
 					String body=null;
 					for(int k=i+4;k<end_body;k++) {
@@ -48,25 +56,20 @@ public class Parsing {//파싱해주는 클래스
 					methodcnt++;
 				}
 			
-				else if(cls.class_name.equals(list.get(i))) {//생성자	
-					System.out.println("생성:"+list.get(i));
-					cls.method_list.add(new MethodInfo(cls.class_name,cls.class_name,sb));
-					System.out.print(cls.getMethod().get(methodcnt).getAccess());
-					//cls.addMethod(new MethodInfo(cls.class_name,cls.class_name,sb));
+				else if(cls.getName().equals(list.get(i))) {//생성자	
+					cls.method_list.add(new MethodInfo(cls.getName(),cls.getName(),sb));
 					cls.getMethod().get(methodcnt).setAccess(access);
 					cls.getMethod().get(methodcnt).setParameterType(list.get(i+2));//i:메소드이름, i+1:괄호(, i+2:parameter type
 					cls.getMethod().get(methodcnt).setType("void");
 					methodcnt++;
 					
 				}
-				else if(kw.kw_type.toString().contains(list.get(i))&&(list.get(i-1).equals(":")||list.get(i-1).equals(";"))) {
+				else if(kw.kw_type.toString().contains(list.get(i))&& s.size()==1) {//list에서 void,int,bool이 나오면 메소드 or 필드일 것이다.
 					
-				//i가 일반 메소드 또는 필드의 반환형을 가리킬 때, parameter의 type과 구분 위해 :또는 ;뒤에 나오는 반환형만 해당
+				//i가 일반 메소드 또는 필드의 반환형을 가리킬 때, stack을 통해 몇번째 괄호 안에 있는 지 확인 후, 첫번쨰 괄호(클래스 괄호)면 멤버로 판단
 					String name=list.get(i+1);//반환형 다음엔 이름
 					if(list.get(i+2).equals("(")) {//이름 뒤에 괄호가 나오면 메소드, 아니면 필드
-						System.out.println("메소드:"+list.get(i+1));
-
-						cls.addMethod(new MethodInfo(cls.class_name,name,sb));
+						cls.addMethod(new MethodInfo(cls.getName(),name,sb));
 						cls.getMethod().get(methodcnt).setType(list.get(i));
 						cls.getMethod().get(methodcnt).setAccess(access);
 						String p_type=(list.get(i+3).equals(")")?null:list.get(i+3));
@@ -81,28 +84,27 @@ public class Parsing {//파싱해주는 클래스
 							cls.getField().get(fieldcnt).setType(list.get(i)+"*");
 							cls.getField().get(fieldcnt).setName(list.get(i+2));
 						}
-						else {
+						else {//포인터 아닌 일반적 필드
 							cls.addField(new FieldInfo());
 							cls.getField().get(fieldcnt).setType(list.get(i));
 							cls.getField().get(fieldcnt).setName(list.get(i+1));
 						}
 						
 						cls.getField().get(fieldcnt).setAccess(access);
-						System.out.println("필드:"+
-						cls.getField().get(fieldcnt).getName()+fieldcnt+"번쨰");
 						fieldcnt++;
 					}
 					
 				}
 			}
-		//for문
+		//메소드에서 사용하는 필드. 필드를 이용하는 메소드를 각각 저장해주기
 		for(int i=0;i<cls.method_list.size();i++) {
-			System.out.println(cls.method_list.get(i).getName());
+			cls.method_list.get(i).find_field(cls);
+			//System.out.println(cls.method_list.get(i).getName()+","+cls.method_list.get(i).getField().size());
 			}
-		System.out.println("then,");
-		for(int i=0;i<cls.field_list.size();i++) {
-				System.out.println(cls.field_list.get(i).getName());
-				}
+//		System.out.println("then,");
+//		for(int i=0;i<cls.field_list.size();i++) {
+//				System.out.println(cls.field_list.get(i).getName()+","+cls.field_list.get(i).getMethod().size());
+//				}
 		//메소드 내부에 있는 field 찾아서 서로 저장 해주는 메소드? 만들어야함!
 	}
 	
@@ -201,15 +203,7 @@ class Tokenize {
 			if(res.get(i).equals("")||res.get(i).contains(" ")||res.get(i).contains("\r\n")||res.get(i).contains("\t")||res.get(i).contains("\r")||res.get(i).contains("\n")) {
 				res.remove(i);
 				i--;
-			}
-//			if(res.get(i).contains("\n") || res.get(i).contains("\t")) {
-//	            temp = res.get(i).trim();
-//	            res.set(i, temp);
-//	         }
-//			if(res.get(i).equals("")) {
-//				res.remove(i);
-//			}
-			
+			}	
 			
 		}
 
@@ -219,12 +213,14 @@ class Tokenize {
 //정보저장 클래스
 
 class ClassInfo{//클래스 정보 저장
-	String class_name;
+	private String class_name;
 	ArrayList<MethodInfo> method_list=new ArrayList<MethodInfo>();//클래스 내부의 method,field list 저장
 	ArrayList<FieldInfo> field_list=new ArrayList<FieldInfo>();
 	int start_class;
 	int end_class;//시작과 끝 인덱스
 	
+	public String getName() {return class_name;}
+	public void setName(String name) {class_name=name;}
 	public void addMethod(MethodInfo m) {method_list.add(m);}
 	public ArrayList<MethodInfo> getMethod() {return method_list;}
 	public void addField(FieldInfo f) {field_list.add(f);}
@@ -254,7 +250,6 @@ class FieldInfo extends MemberInfo{//필드 정보저장
 	public ArrayList<MethodInfo> getMethod() {return method;}
 	
 	public FieldInfo() {
-		
 	}
 }
 
@@ -308,6 +303,17 @@ class MethodInfo extends MemberInfo{//메소드 정보저장
 				end_index=i;
 				//가장 처음에 열린 괄호가 스택에서 빠져나와 스택이 비면, 마지막 닫은 괄호가 메소드의 end 위치이다.
 				break;
+			}
+		}
+	}
+	
+	public void find_field(ClassInfo cls) {//메소드에서 어떤 필드가 쓰이고, 필드는 각각 어떤 메소드에서 쓰이는지 저장
+		if(!(getName().equals("~"+cls.getName()))) {//소멸자가 아닐때
+			for(int i=0;i<cls.getField().size();i++) {
+				if(getBody().contains(cls.getField().get(i).getName())) {//Body에 field 이름에 해당하는 string이 있으면
+					addField(cls.getField().get(i));//메소드info의 field리스트에 해당 fieldinfo 저장
+					cls.getField().get(i).addMethod(this);//fieldinfo의 method리스트에 해당 methodinfo 저장
+				}
 			}
 		}
 	}
