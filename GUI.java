@@ -38,15 +38,13 @@ import javax.swing.tree.DefaultTreeCellRenderer;
 
 public class GUI extends JFrame implements ActionListener, TreeSelectionListener{
 	private JFrame frame;
-	private JButton OK, Cancel, Change;
 	private JMenuBar menuBar;
 	private JMenu menu;
-	private JMenuItem Open, Exit, Save;
+	private JMenuItem Open, Exit;
 	private JTree tree;
 	private JTable table_class, table_field;
-	private JPanel treePanel, contentPanel, changePanel; //content는 method의 body
-	private JScrollPane scrollPane;
-	private JTextArea contentArea, variableArea, ChangeTextArea;
+	private JPanel treePanel, contentPanel; //treePanel에는 트리구조와 메소드에 사용되는 변수가, contentPanel에는 메소드의 body와 table이 표시됨.
+	private JTextArea contentArea, variableArea;
 	private Vector<DefaultMutableTreeNode> method;
 	private Vector<DefaultMutableTreeNode> variable;
 	private DefaultMutableTreeNode root;
@@ -56,26 +54,22 @@ public class GUI extends JFrame implements ActionListener, TreeSelectionListener
 	public GUI() { 
 		setSize(1000, 1000);
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setLayout(new GridLayout(0,2));
+		setLayout(new GridLayout(0,2)); //왼쪽엔 treePanel, 오른쪽엔 contentPanel.
 		
-		treePanel = new JPanel(new GridLayout(2,1));
+		treePanel = new JPanel(new GridLayout(2,1)); //위쪽은 Tree구조, 아래쪽은 메소드에서 사용되는 변수표시.
 		contentPanel = new JPanel(new BorderLayout());
-		Change = new JButton("변경");
-		Change.addActionListener(this);
+		
 		//메뉴
 		Open = new JMenuItem("Open");
-		Save = new JMenuItem("Sava");
 		Exit = new JMenuItem("Exit");
 		
 		//메뉴 이벤트 설정
 		Open.addActionListener(this);
-		Save.addActionListener(this);
 		Exit.addActionListener(this);
 		
 		menu = new JMenu("File");
 		menuBar = new JMenuBar();
 		menu.add(Open);
-		menu.add(Save);
 		menu.add(Exit);
 		menuBar.add(menu);
 		setJMenuBar(menuBar);
@@ -88,19 +82,22 @@ public class GUI extends JFrame implements ActionListener, TreeSelectionListener
 		}
 		if(e.getSource() == Open) {
 			p = new Parsing();
-			variableArea = new JTextArea(10,10);
-			contentArea = new JTextArea(40,40);
+			
+			variableArea = new JTextArea(10,10); //TreePanel의 아래쪽에 붙을 Area
+			contentArea = new JTextArea(40,40); //contentPanel에 붙을 메소드의 body를 표시할 Area.
 			
 			//tree 생성
 			root = new DefaultMutableTreeNode("" + p.cls.getName());
-			tree=new JTree(root);
+			tree = new JTree(root);
 			tree.addTreeSelectionListener(this);
 			
-			scrollPane = new JScrollPane(tree);
-			treePanel.add(scrollPane);
-			treePanel.add(variableArea);
+			//treePanel에 add하기.
+			treePanel.add(tree, BorderLayout.PAGE_START); //Tree구조는 treePanel에서 먼저(위쪽)에 배치됨.
+			treePanel.add(variableArea,BorderLayout.PAGE_END);
+			//contentPanel에 add하기.
 			contentPanel.add(contentArea, BorderLayout.CENTER);
-			add(treePanel);
+			//Frame에 add하기.
+			add(treePanel); 
 			add(contentPanel);
 			setVisible(true);
 		}
@@ -109,70 +106,72 @@ public class GUI extends JFrame implements ActionListener, TreeSelectionListener
 		DefaultMutableTreeNode node = (DefaultMutableTreeNode)tree.getLastSelectedPathComponent(); //node에 현재 선택된 객체를 가져온다
 		if(node == null)
 			return;
-		String s = (String)node.getUserObject(); //노드로 지정된 객체를 반환한다. 보통 이벤트 처리시 노드의 이름을 가져올 때 사용한다.
 		
-		//트리에서 선택된 항목이 클래스의 이름과 같은 경우?
+		String s = (String)node.getUserObject(); //노드로 지정된 객체를 반환.
+		
+		//트리에서 클래스를 선택했을 때.
+		if(node == root) { //클래스 Stack과 메소드 Stack을 구분하기 위해 사용.
 		if(s.equals(p.cls.getName())) {
+			//System.out.println("클래스 선택됨");
 			try{
-				//scrollPane.remove(contentArea);
-                //scrollPane.remove(table_class);
-                //scrollPane.remove(table_field);
-                remove(contentPanel);
+				contentPanel.remove(contentArea);
+				contentPanel.remove(table_class);
+				contentPanel.remove(table_field);
+				remove(contentPanel);
                 variableArea.setBorder(null);
                 variableArea.setText(null);
                 treePanel.remove(variableArea);
-                setVisible(true);
-	            } catch(Exception e1){}
+                } catch(Exception e1){}
+			}
 		}
-		
-		//table생성
-		String[] col = {"Name", "Type", "Access"};
-		Object[][] row = new Object[10][3]; //크기는 임의로 지정
-		table_class = new JTable(row, col);
-		//scrollPane = new JScrollPane(table_class);
-		//contentPanel = new JPanel();
-		setVisible(true);
+		//테이블생성
+		String[] col1 = {"Name", "Type", "Access"};
+		Object[][] row1 = new Object[10][3]; 
 		
 		//테이블에 메소드 정보 표시
 		method=new Vector<DefaultMutableTreeNode>();
 		for(int i = 0; i < p.cls.getMethod().size(); i++) {
-            row[i][0] = p.cls.getMethod().get(i).getName();
-            row[i][1] = p.cls.getMethod().get(i).getType();
-            row[i][2] = p.cls.getMethod().get(i).getAccess();
+            row1[i][0] = p.cls.getMethod().get(i).getName();
+            row1[i][1] = p.cls.getMethod().get(i).getType();
+            row1[i][2] = p.cls.getMethod().get(i).getAccess();
 		
             //트리에 메소드노드를 붙인다.
             method.add(new DefaultMutableTreeNode("" + p.cls.getMethod().get(i).getName()));
             root.add(method.get(i));
-		} setVisible(true);
+		}
 		
         //테이블에 변수 표시
 		variable = new Vector<DefaultMutableTreeNode>();
 		for(int i = 0; i < p.cls.getField().size(); i++) {
-			row[i + p.cls.getMethod().size()][0] = p.cls.getField().get(i).getName();
-			row[i + p.cls.getMethod().size()][1] = p.cls.getField().get(i).getType();
-			row[i + p.cls.getMethod().size()][2] = p.cls.getField().get(i).getAccess();
+			row1[i + p.cls.getMethod().size()][0] = p.cls.getField().get(i).getName();
+			row1[i + p.cls.getMethod().size()][1] = p.cls.getField().get(i).getType();
+			row1[i + p.cls.getMethod().size()][2] = p.cls.getField().get(i).getAccess();
 		
 			//트리에 변수 항목 표시
 			variable.add(new DefaultMutableTreeNode("" + p.cls.getField().get(i).getName()));
 			root.add(variable.get(i));
-		} setVisible(true);
+		}
+		table_class = new JTable(row1, col1);
 		contentPanel.add(table_class, BorderLayout.CENTER);
 		add(contentPanel);
 		
 		
 		//메소드를 선택했을 때 이벤트 표시
+		if(node != root) { //Stack메소드는 root노드가 아님을 확인.
 		for(int i = 0 ; i < p.cls.getMethod().size(); i++) {
 			if(s.equals(p.cls.getMethod().get(i).getName())) {
+				//System.out.println("메소드 선택됨");
 				try {
-					//scrollPane에 있던 내용 지우기
-//					scrollPane.remove(contentArea);
-//	                scrollPane.remove(table_class);
-//	                scrollPane.remove(table_field);
-//	                contentPanel.remove(contentArea);
-	                contentPanel.remove(table_class);
+					contentPanel.remove(contentArea);
+					contentPanel.remove(table_class);
+					contentPanel.remove(table_field);
+					remove(contentPanel);
 	                variableArea.setBorder(null);
 	                variableArea.setText(null);
 				} catch(Exception e1) {}
+				
+				//만약 아래 라인이 없다면 메소드가 선택될 때마다 이미 생성되어 있던 contentArea를 이용하기 때문에 새로 생긴 table_class, table_field에 의해 가려진다.
+				contentArea = new JTextArea(40, 40); 
 				
 				String variable = "";
 				
@@ -187,61 +186,50 @@ public class GUI extends JFrame implements ActionListener, TreeSelectionListener
 	            contentArea.setBorder(border2);
 	               
 	            contentArea.setText("\n" + p.cls.getMethod().get(i).getBody());
-	            variableArea.setText(variable); //method에서 사용하는 var를 바로 위에서 정의한 string으로 표현
-	               
+	            variableArea.setText(variable); 
+	            
 	            variableArea.setEditable(false);
 	            contentArea.setEditable(true);
-	               
-	            //scrollPane = new JScrollPane(contentArea);
+	            
+	            //add하기.
 	            contentPanel.add(contentArea,BorderLayout.CENTER);
-	            
-	            //chagne부분 잘 모르겠다
-	            changePanel = new JPanel();
-	            changePanel.add(Change);
-	            contentPanel.add(changePanel, BorderLayout.PAGE_END);
-	            
 	            treePanel.add(variableArea,BorderLayout.PAGE_END);
 	            add(treePanel);
 	            add(contentPanel);   
-	            setVisible(true);
+				}
 			}
 		}
 		//변수를 선택했을 테이블 표시
 		for(int k = 0; k < p.cls.getField().size(); k++) {
-			if(s.equals("" + p.cls.getField().get(k).getName() + " : "+p.cls.getField().get(k).getType())) {
+			if(s.equals(p.cls.getField().get(k).getName())) {
+				//System.out.println("변수 선택됨");
 	        // 트리에서 선택된 노드가 변수 이름과 같을 때
 				try{
-//					scrollPane.remove(contentArea);
-//	                scrollPane.remove(table_class);
-//	                scrollPane.remove(table_field);
-//	                contentPanel.remove(scrollPane);
-					remove(variableArea);
+					contentPanel.remove(contentArea);
+					contentPanel.remove(table_class);
+					contentPanel.remove(table_field);
+					remove(contentPanel);
 	                variableArea.setBorder(null);
 	                variableArea.setText(null);
+	                treePanel.remove(variableArea);
 	               } catch(Exception e1){}
 	               
 	            // 변수 이름과 변수과 사용된 메소드를 기록한 테이블 생성
-	            String[] cols = {"Name","method"};
-	            Object[][] data = new Object[10][2];
+	            String[] col2 = {"Name","method"};
+	            Object[][] row2 = new Object[10][2];
 	            for(int j=0; j < p.cls.getField().get(k).getMethod().size(); j++) {
-	                  data[j][0] = null; //변수의 이름이 들어가야함(밑에서 설정함)
-	                  data[j][1] = p.cls.getField().get(k).getMethod().get(j).getName();
+	                  row2[j][0] = null; //변수의 이름이 들어가야함(밑에서 설정함)
+	                  row2[j][1] = p.cls.getField().get(k).getMethod().get(j).getName();
 	            }
-	            data[0][0] = p.cls.getField().get(k).getName();
-	        
-	            //table 속성 설정
-	            //table.setPreferredScrollableViewportSize(new Dimension(200,200));
-	            //table.setFillsViewportHeight(true);
-	            //table.setAutoCreateRowSorter(true);
-	            table_field = new JTable(data,cols);
-	            //scrollPane = new JScrollPane(table_field);
+	            row2[0][0] = p.cls.getField().get(k).getName();
+	   
+	            table_field = new JTable(row2, col2);
 	            contentPanel.add(table_field,BorderLayout.CENTER);
 	            treePanel.add(variableArea,BorderLayout.PAGE_END);
-	            add(treePanel);
 	            add(contentPanel);                          
 	            }            
 		}
-		
+		setVisible(true);
 	}
 	public static void main(String[] args) {
 		// TODO Autogenerated method stub
