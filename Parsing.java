@@ -9,6 +9,7 @@ public class Parsing {//파싱해주는 클래스
 	ArrayList<String> res=tk.getRes();
 	//토큰화 마친 결과=res로 arraylist 형식 저장
 	StringBuffer sb=new StringBuffer(tk.sb_without_comment);
+	ClassInfo cls=new ClassInfo();//class정보저장 객체생성
 	static int methodcnt;
 	static int fieldcnt;//메소드 및 필드 개수 카운트
 	
@@ -17,7 +18,6 @@ public class Parsing {//파싱해주는 클래스
 	}
 	public void find_class(ArrayList<String> list) {
 		int i=list.indexOf("class");//class 위치 찾기=i에 index 저장
-		ClassInfo cls=new ClassInfo();//class정보저장 객체생성
 		cls.setName(list.get(i+1));//"class" 다음에 나오는(i+1위치) 클래스 이름 저장
 		cls.start_class=list.indexOf("{");
 		cls.end_class=find_end_index(cls.start_class,list);//시작과 끝 지점 저장
@@ -45,14 +45,16 @@ public class Parsing {//파싱해주는 클래스
 					MethodInfo destructor=new MethodInfo();
 					destructor.setName("~"+list.get(i));//소멸자 이름 설정
 					int end_body=find_end_index(i+3,list);//list[i+3]은 {,list[end_body]는 }가르키게
-					String body=null;
+					String body="";
 					for(int k=i+4;k<end_body;k++) {
 							body+=list.get(k);//그 사이값들은 모두 body에 저장
 					}
 					destructor.setBody(body);
 					destructor.setType("void");//소멸자 반환형은 void
 					destructor.setAccess(access);
+					destructor.setParameterType("");
 					cls.addMethod(destructor);
+
 					methodcnt++;
 				}
 			
@@ -72,7 +74,7 @@ public class Parsing {//파싱해주는 클래스
 						cls.addMethod(new MethodInfo(cls.getName(),name,sb));
 						cls.getMethod().get(methodcnt).setType(list.get(i));
 						cls.getMethod().get(methodcnt).setAccess(access);
-						String p_type=(list.get(i+3).equals(")")?null:list.get(i+3));
+						String p_type=(list.get(i+3).equals(")")?"":list.get(i+3));
 						//괄호안에 아무것도 없으면 parameter type=null, 아니면 parameter type=i+3
 						cls.getMethod().get(methodcnt).setParameterType(p_type);
 					
@@ -99,13 +101,7 @@ public class Parsing {//파싱해주는 클래스
 		//메소드에서 사용하는 필드. 필드를 이용하는 메소드를 각각 저장해주기
 		for(int i=0;i<cls.method_list.size();i++) {
 			cls.method_list.get(i).find_field(cls);
-			//System.out.println(cls.method_list.get(i).getName()+","+cls.method_list.get(i).getField().size());
 			}
-//		System.out.println("then,");
-//		for(int i=0;i<cls.field_list.size();i++) {
-//				System.out.println(cls.field_list.get(i).getName()+","+cls.field_list.get(i).getMethod().size());
-//				}
-		//메소드 내부에 있는 field 찾아서 서로 저장 해주는 메소드? 만들어야함!
 	}
 	
 	public int find_end_index(int start,ArrayList<String> arrlist) {//시작 괄호 지점을 알때, 이에 상응하는 끝지점을 저장해주는 메소드
@@ -114,15 +110,12 @@ public class Parsing {//파싱해주는 클래스
 		for(int i=start;;i++) {
 			if(arrlist.get(i).equals("{")||arrlist.get(i).equals("(")) {
 				st.push(i);
-				System.out.print("push"+i+":"+arrlist.get(i));
 			}//괄호를 열면 그 인덱스(위치)를 스택에 저장
 			else if(arrlist.get(i).equals("}")||arrlist.get(i).equals(")")) {
 				st.pop();
-				System.out.print("pop"+i+":"+arrlist.get(i));
 
 			}//괄호를 닫으면 가장 최근의 여는괄호의 위치를 삭제
 			if(st.empty()) {
-				System.out.println("empty"+i+":"+arrlist.get(i));
 				return i;//가장 처음에 열린 괄호가 스택에서 빠져나와 스택이 비면, 마지막 닫은 괄호가 메소드의 end 위치이다.
 			}
 		}
@@ -133,7 +126,7 @@ public static void main(String[] args) {
 	}
 
 }
-class SaveKeyword {
+class SaveKeyword {//키워드 저장하는 클래스
 	ArrayList<String> kw_access= new ArrayList<String>();
 	ArrayList<String> kw_type= new ArrayList<String>();
 	String kw_class="class";
@@ -178,7 +171,7 @@ class Tokenize {
 		
 		String s=sb.toString();
 		
-		//구별기호 :{}();=
+		//구별기호 포함하여 tokenizer
 		StringTokenizer st = new StringTokenizer(s, "*+?->~!:{}();=[]\n\r"
 				+ "\r\n"+"\t"+" ", true) ;
 		
@@ -187,10 +180,10 @@ class Tokenize {
 			res.add(st.nextToken());
 		}
 		System.out.print(res.size());
-//		String temp=null;
+		
+		
 		//::, whitespace 처리
-		for(int i = 0; i < res.size(); i++) {
-			
+		for(int i = 0; i < res.size(); i++) {		
 			
 			if(res.get(i).equals(":")) {
 				i++;
@@ -200,7 +193,9 @@ class Tokenize {
 					res.set(i, "::");
 				}
 			}
-			if(res.get(i).equals("")||res.get(i).contains(" ")||res.get(i).contains("\r\n")||res.get(i).contains("\t")||res.get(i).contains("\r")||res.get(i).contains("\n")) {
+			//공백문자가 포함된 상태로 토큰화 되었으므로  공백문자 토큰을 제거
+			if(res.get(i).equals("")||res.get(i).contains(" ")||res.get(i).contains("\r\n")
+					||res.get(i).contains("\t")||res.get(i).contains("\r")||res.get(i).contains("\n")) {
 				res.remove(i);
 				i--;
 			}	
@@ -244,7 +239,7 @@ class MemberInfo{
 }
 
 class FieldInfo extends MemberInfo{//필드 정보저장
-	private ArrayList<MethodInfo> method=new ArrayList<MethodInfo>();
+	private ArrayList<MethodInfo> method=new ArrayList<MethodInfo>();//해당 필드를 사용하는 메소드 저장
 	
 	public void addMethod(MethodInfo m) {method.add(m);}
 	public ArrayList<MethodInfo> getMethod() {return method;}
@@ -257,7 +252,7 @@ class FieldInfo extends MemberInfo{//필드 정보저장
 class MethodInfo extends MemberInfo{//메소드 정보저장
 	private String body;
 	private String parameter_type;
-	private ArrayList<FieldInfo> field=new ArrayList<FieldInfo>();
+	private ArrayList<FieldInfo> field=new ArrayList<FieldInfo>();//해당 메소드에서 사용하는 필드 저장
 	
 	public void setBody(String body) {this.body=body;}
 	public String getBody() {return body;}
@@ -266,7 +261,7 @@ class MethodInfo extends MemberInfo{//메소드 정보저장
 	public void setParameterType(String parameter_type) {this.parameter_type=parameter_type;}
 	public String getParameterType() {return parameter_type;}
 	
-	public MethodInfo(String class_name,String mtd_name, StringBuffer sb) {//클래스 네임 말고 클래스인포형이
+	public MethodInfo(String class_name,String mtd_name, StringBuffer sb) {//소멸자 제외하고는 클래스 외부에 있는 메소드 바디 자동으로 찾기
 		this.setName(mtd_name);
 		find_mtd_body(class_name,mtd_name,sb);
 	}
@@ -275,7 +270,7 @@ class MethodInfo extends MemberInfo{//메소드 정보저장
 		
 	}
 	public void find_mtd_body(String class_name, String name, StringBuffer sb) {
-	//메소드 시작점과 끝점을 이용하여 body를 mtd_body필드에 스트링 형태로 저장
+	//메소드 시작점과 끝점을 이용하여 메소드 바디를 body필드에 스트링 형태로 저장
 		
 		String method_form=class_name+"::"+name;
 		
@@ -318,7 +313,7 @@ class MethodInfo extends MemberInfo{//메소드 정보저장
 		}
 	}
 }
-class ReadFileData {
+class ReadFileData {//파일 불러오는 클래스
 	static private StringBuffer sb;
 	ReadFileData(String address){
 		read(address);
